@@ -1,0 +1,63 @@
+{
+  "name": "opik-zencoder-chat-history",
+  "displayName": "Opik - Zencoder chat history",
+  "description": "Store your vibe coding sessions in Opik",
+  "repository": "https://github.com/jverre/opik-zencoder-chat-history",
+  "publisher": "jverre",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.99.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "*"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "type": "object",
+      "title": "Opik - Zencoder Chat History - Configuration",
+      "properties": {
+        "opikHistory.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Opik API Key used to store your chat sessions"
+        },
+        "opikHistory.VSCodePath": {
+          "type": "string",
+          "default": "",
+          "description": "Path to the VSCode user data directory. Leave empty to use the default path."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "deploy": "vsce publish --yarn",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@types/vscode": "^1.99.0",
+    "@typescript-eslint/eslint-plugin": "^8.28.0",
+    "@typescript-eslint/parser": "^8.28.0",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1",
+    "@vscode/vsce": "^3.3.2",
+    "eslint": "^9.23.0",
+    "typescript": "^5.8.2"
+  },
+  "dependencies": {
+    "axios": "^1.8.4",
+    "glob": "^11.0.1",
+    "node-fetch": "^3.3.2",
+    "opik": "^1.7.2"
+  }
+}

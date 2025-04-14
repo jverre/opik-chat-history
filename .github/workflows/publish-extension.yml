@@ -1,0 +1,30 @@
+name: Publish VS Code Extension
+
+on:
+  release:
+    types:
+        - created
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v2
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Compile TypeScript
+      run: npm run compile
+
+    - name: Publish Extension
+      env:
+        VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      run: npm run deploy
