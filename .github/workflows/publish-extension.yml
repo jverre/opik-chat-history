@@ -12,12 +12,6 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
-      with:
-        fetch-depth: 0  # Ensure full history is fetched
-
-    - name: Checkout release branch
-      run: |
-        git checkout "${GITHUB_REF#refs/tags/}"
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
