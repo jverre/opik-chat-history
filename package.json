@@ -1,10 +1,11 @@
 {
   "name": "opik-zencoder-chat-history",
-  "displayName": "Opik - Zencoder chat history",
+  "displayName": "Opik - Track chat history (Zencoder)",
   "description": "Store your vibe coding sessions in Opik",
   "repository": "https://github.com/jverre/opik-zencoder-chat-history",
   "publisher": "jverre",
-  "version": "0.0.1",
+  "version": "0.0.2",
+  "preview": true,
   "engines": {
     "vscode": "^1.99.0"
   },
@@ -12,14 +13,20 @@
     "Other"
   ],
   "activationEvents": [
-    "*"
+    "onStartupFinished"
   ],
   "main": "./out/extension.js",
+  "icon": "icon.png",
   "contributes": {
     "configuration": {
       "type": "object",
       "title": "Opik - Zencoder Chat History - Configuration",
       "properties": {
+        "opikHistory.projectName": {
+          "type": "string",
+          "default": "zencoder",
+          "description": "The name of the Opik project to store chat sessions in"
+        },
         "opikHistory.apiKey": {
           "type": "string",
           "default": "",
@@ -36,7 +43,7 @@
   "scripts": {
     "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
-    "deploy": "vsce publish --npm",
+    "deploy": "vsce publish",
     "watch": "tsc -watch -p ./",
     "pretest": "npm run compile && npm run lint",
     "lint": "eslint src",
@@ -58,6 +65,7 @@
     "axios": "^1.8.4",
     "glob": "^11.0.1",
     "node-fetch": "^3.3.2",
-    "opik": "^1.7.2"
+    "opik": "^1.7.2",
+    "posthog-node": "^4.11.5"
   }
 }

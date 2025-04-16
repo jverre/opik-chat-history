@@ -20,4 +20,4 @@ To configure the extension, open up VSCode settings (Ctrl + ,), find the setting
 
 ## Usage
 
-Once installed, there is nothing for you to do ! Just sit back and enjoy your coding experience knowing that all your chat history is saved in Opik ...
+Once installed, there is nothing for you to do ! Just sit back and enjoy your coding experience knowing that all your chat history is saved in Opik
