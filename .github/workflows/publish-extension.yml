@@ -12,6 +12,12 @@ jobs:
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
+      with:
+        fetch-depth: 0  # Ensure full history is fetched
+
+    - name: Checkout release branch
+      run: |
+        git checkout "${GITHUB_REF#refs/tags/}"
 
     - name: Set up Node.js
       uses: actions/setup-node@v3
@@ -38,7 +44,7 @@ jobs:
         git config --global user.email 'github-actions@github.com'
         git add package.json
         git commit -m 'Update version to $VERSION'
-        git push
+        git push origin main
 
     - name: Compile TypeScript
       run: npm run compile
