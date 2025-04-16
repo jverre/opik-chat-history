@@ -4,7 +4,7 @@
   "description": "Store your vibe coding sessions in Opik",
   "repository": "https://github.com/jverre/opik-zencoder-chat-history",
   "publisher": "jverre",
-  "version": "0.0.2",
+  "version": "0.0.5",
   "preview": true,
   "engines": {
     "vscode": "^1.99.0"
