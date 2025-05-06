@@ -4,7 +4,7 @@
   "description": "Store your vibe coding sessions in Opik",
   "repository": "https://github.com/jverre/opik-zencoder-chat-history",
   "publisher": "jverre",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "preview": true,
   "engines": {
     "vscode": "^1.99.0"
@@ -20,17 +20,17 @@
   "contributes": {
     "configuration": {
       "type": "object",
-      "title": "Opik - Zencoder Chat History - Configuration",
+      "title": "Opik - Chat History",
       "properties": {
-        "opikHistory.projectName": {
-          "type": "string",
-          "default": "zencoder",
-          "description": "The name of the Opik project to store chat sessions in"
-        },
         "opikHistory.apiKey": {
           "type": "string",
           "default": "",
           "description": "Opik API Key used to store your chat sessions"
+        },
+        "opikHistory.projectName": {
+          "type": "string",
+          "default": "zencoder",
+          "description": "The name of the Opik project to store chat sessions in"
         },
         "opikHistory.VSCodePath": {
           "type": "string",
