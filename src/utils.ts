@@ -4,27 +4,34 @@ import * as os from 'os';
 import * as fs from 'fs';  
 import { v4 as uuidv4 } from 'uuid';
 
-export function getDefaultVSCodeUserDataPath(): string {
-  const homeDir = os.homedir();
-  let userDataPath = '';
+// Create output channel for logging
+let outputChannel: vscode.OutputChannel;
 
-  switch (process.platform) {
-    case 'win32':
-      userDataPath = path.join(homeDir, 'AppData', 'Roaming', 'Code');
-      break;
-    case 'darwin':
-      userDataPath = path.join(homeDir, 'Library', 'Application Support', 'Code');
-      break;
-    case 'linux':
-      userDataPath = path.join(homeDir, '.config', 'Code');
-      break;
-    default:
-      throw new Error('Unsupported platform');
-  }
-
-  return userDataPath;
+export function initializeLogging() {
+  outputChannel = vscode.window.createOutputChannel('Cursor DB Finder');
+  outputChannel.show(); // This will show the output panel automatically
 }
 
+export function log(message: string) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] ${message}`;
+  
+  // Log to both console and VS Code output channel
+  console.log(logMessage);
+  if (outputChannel) {
+    outputChannel.appendLine(logMessage);
+  }
+}
+
+export function getDefaultVSCodeUserDataPath(context?: vscode.ExtensionContext): string {
+  if (context && context.globalStorageUri) {
+    // Move to the right parent directory as we are in <.../Cursor/User/globalStorage>
+    const parentPath = path.join(context.globalStorageUri.fsPath, '..', '..', '..');
+    return parentPath;
+  } else {
+    throw new Error('Unsupported platform');
+  }
+}
 
 export function findFolder(basePath: string, folderName: string): string[] {
   let results: string[] = [];
@@ -53,6 +60,8 @@ export function readJsonFile(filePath: string): any {
       return JSON.parse(fileContents);
     } catch (error) {
       console.error(`Error reading or parsing ${filePath}:`, error);
+      // Note: Enhanced error logging would be added here if PostHog context was available
+      // This error will be caught and logged by the calling service
       return null;
     }
   }

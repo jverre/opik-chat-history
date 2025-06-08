@@ -1,15 +1,15 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import * as fs from 'fs';
 import { PostHog } from 'posthog-node';
 import { getDefaultVSCodeUserDataPath, getOrCreateUUID } from './utils';
-import { findAndReturnNewTraces } from './zencoder/sessionManager';
-import { logTracesToOpik } from './opik';
-import { updateSessionInfo, getSessionInfo, resetGlobalState } from './state';
-import { logBIAPIKeyNotFound, logBIExtensionStarted, logBIExtensionActivated, logBINewTracesFound } from './logger';
+import { resetGlobalState } from './state';
+import { logBIAPIKeyNotFound, logBIExtensionStarted, logBIExtensionActivated, logConfigurationInfo, logFileSystemError } from './logger';
+import { ZencoderService } from './zencoder/zencoderService';
+import { CursorService } from './cursor/cursorService';
+
 
 export function activate(context: vscode.ExtensionContext) {
-  resetGlobalState(context);
+  //resetGlobalState(context);
 
   const posthog = new PostHog(
     'phc_1Fv1j8C4NDCl9EVEoe204HNdt4eH3gbmpKv8LaT2on1',
@@ -28,19 +28,27 @@ export function activate(context: vscode.ExtensionContext) {
 
     console.log('Congratulations, your extension "opikHistory" is now active!');
 
-    const userDataPath = vscode.workspace.getConfiguration().get<string>('myExtension.VSCodePath') || '';
+    // Log configuration info for debugging
+    const config = vscode.workspace.getConfiguration();
+    const apiKey: string | undefined = config.get('opikHistory.apiKey');
+    const zencoderProjectName: string = config.get('opikHistory.projectNameZencoderChats') || 'zencoder';
+    const cursorProjectName: string = config.get('opikHistory.projectNameCursorChats') || 'cursor';
+    const customVSCodePath: string = config.get('opikHistory.VSCodePath') || '';
+    
+    logConfigurationInfo(posthog, uniqueId, {
+      hasApiKey: !!apiKey,
+      zencoderProjectName: zencoderProjectName,
+      cursorProjectName: cursorProjectName,
+      hasCustomVSCodePath: !!customVSCodePath
+    });
+
+    const userDataPath = vscode.workspace.getConfiguration().get<string>('opikHistory.VSCodePath') || '';
     let VSInstallationPath = '';
     try {
-      VSInstallationPath = fs.existsSync(userDataPath) ? userDataPath : getDefaultVSCodeUserDataPath();
+      VSInstallationPath = fs.existsSync(userDataPath) ? userDataPath : getDefaultVSCodeUserDataPath(context);
     } catch (error) {
       console.error('Error getting VSCode user data path:', error);
-      posthog.capture({
-        distinctId: uniqueId,
-        event: 'error',
-        properties: {
-          error: error instanceof Error ? error.message : String(error)
-        }
-      })
+      logFileSystemError(posthog, uniqueId, 'get_vscode_user_data_path', userDataPath, error as Error);
       vscode.window.showErrorMessage('Failed to get VSCode user data path. Please check your configuration.');
       return;
     }
@@ -48,64 +56,42 @@ export function activate(context: vscode.ExtensionContext) {
 
     let showAPIKeyWarning = true;
     let logAPIKeyBIEvent = true;
-    let sessionInfo = getSessionInfo(context);
+    const zencoderService = new ZencoderService(context, posthog, uniqueId);
+    const cursorService = new CursorService(context, posthog, uniqueId);
 
-    const interval = setInterval(() => {
+    const interval = setInterval(async () => {
       try {
         const apiKey: string | undefined = vscode.workspace.getConfiguration().get('opikHistory.apiKey');
 
-      if (!apiKey && showAPIKeyWarning) {
-        vscode.window.showErrorMessage(
-          'To log Zencoder chat sessions to Opik you will need to set your Opik API Key.',
-          'Open Settings'
-        ).then(selection => {
-          if (selection === 'Open Settings') {
-            vscode.commands.executeCommand('workbench.action.openSettings', 'opikHistory.apiKey');
-          }
-        });
+        if (!apiKey && showAPIKeyWarning) {
+          vscode.window.showErrorMessage(
+            'To log Zencoder chat sessions to Opik you will need to set your Opik API Key.',
+            'Open Settings'
+          ).then(selection => {
+            if (selection === 'Open Settings') {
+              vscode.commands.executeCommand('workbench.action.openSettings', 'opikHistory.apiKey');
+            }
+          });
 
-        logBIAPIKeyNotFound(posthog, uniqueId)
-        showAPIKeyWarning = false;
-        return;
-      } else if (!apiKey) {
-        return;
-      } else if (apiKey && logAPIKeyBIEvent) {
-        vscode.window.showInformationMessage(
-          'Your zencoder chat history will now be logged to Opik!'
-        )
-        logAPIKeyBIEvent = false;
-        logBIExtensionActivated(posthog, uniqueId)
-      }
-
-      let numberOfTracesLogged = 0;
-
-      let sessionInfo = getSessionInfo(context);
-      const zencoderData = findAndReturnNewTraces(context, VSInstallationPath, sessionInfo)
-
-      for (const { sessionId, tracesData, lastMessageId, lastMessageTime } of zencoderData) {
-        if (tracesData.length > 0) {
-          logBINewTracesFound(posthog, uniqueId, sessionId, tracesData.length)
+          logBIAPIKeyNotFound(posthog, uniqueId)
+          showAPIKeyWarning = false;
+          return;
+        } else if (!apiKey) {
+          return;
+        } else if (apiKey && logAPIKeyBIEvent) {
+          vscode.window.showInformationMessage(
+            'Your zencoder chat history will now be logged to Opik!'
+          )
+          logAPIKeyBIEvent = false;
+          logBIExtensionActivated(posthog, uniqueId)
         }
 
-        logTracesToOpik(apiKey, tracesData);
+        const numberOfZencoderTracesLogged = await zencoderService.processZencoderTraces(apiKey, VSInstallationPath);
+        const numberOfCursorTracesLogged = await cursorService.processCursorTraces(apiKey, VSInstallationPath);
 
-        if (!sessionInfo[sessionId]) {
-          sessionInfo[sessionId] = {};
-        }
-
-        if (lastMessageId) {
-          sessionInfo[sessionId].lastUploadId = lastMessageId;
-        }
-        if (lastMessageTime) {
-          sessionInfo[sessionId].lastUploadTime = lastMessageTime;
-        }
-
-        numberOfTracesLogged += tracesData.length;
-      }
-      updateSessionInfo(context, sessionInfo);
-
-      console.log(`Number of traces logged: ${numberOfTracesLogged}`);
-      console.log('Finished loop');
+        console.log(`Number of Zencoder traces logged: ${numberOfZencoderTracesLogged}`);
+        console.log(`Number of Cursor traces logged: ${numberOfCursorTracesLogged}`);
+        console.log('Finished loop');
       } catch (error) {
         console.error('Error logging extension started:', error);
         posthog.capture({

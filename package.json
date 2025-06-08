@@ -1,13 +1,13 @@
 {
-  "name": "opik-zencoder-chat-history",
-  "displayName": "Opik - Track chat history (Zencoder)",
-  "description": "Store your vibe coding sessions in Opik",
-  "repository": "https://github.com/jverre/opik-zencoder-chat-history",
+  "name": "opik-chat-history",
+  "displayName": "Opik - Export your chat history (Cursor, Zencoder)",
+  "description": "Export your chat history from Cursor and Zencoder to Opik.",
+  "repository": "https://github.com/jverre/opik-chat-history",
   "publisher": "jverre",
-  "version": "0.0.6",
-  "preview": true,
+  "version": "0.1.0",
+  "preview": false,
   "engines": {
-    "vscode": "^1.99.0"
+    "vscode": "^1.90.0"
   },
   "categories": [
     "Other"
@@ -27,10 +27,15 @@
           "default": "",
           "description": "Opik API Key used to store your chat sessions"
         },
-        "opikHistory.projectName": {
+        "opikHistory.projectNameZencoderChats": {
           "type": "string",
           "default": "zencoder",
-          "description": "The name of the Opik project to store chat sessions in"
+          "description": "The name of the Opik project to store Zencoder chat sessions in"
+        },
+        "opikHistory.projectNameCursorChats": {
+          "type": "string",
+          "default": "cursor",
+          "description": "The name of the Opik project to store Cursor chat sessions in"
         },
         "opikHistory.VSCodePath": {
           "type": "string",
@@ -42,6 +47,7 @@
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
+    "build": "vsce pack",
     "compile": "tsc -p ./",
     "deploy": "vsce publish",
     "watch": "tsc -watch -p ./",
@@ -52,7 +58,7 @@
   "devDependencies": {
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
-    "@types/vscode": "^1.99.0",
+    "@types/vscode": "^1.90.0",
     "@typescript-eslint/eslint-plugin": "^8.28.0",
     "@typescript-eslint/parser": "^8.28.0",
     "@vscode/test-cli": "^0.0.10",
@@ -62,10 +68,13 @@
     "typescript": "^5.8.2"
   },
   "dependencies": {
+    "@types/uuid": "^10.0.0",
     "axios": "^1.8.4",
     "glob": "^11.0.1",
     "node-fetch": "^3.3.2",
     "opik": "^1.7.2",
-    "posthog-node": "^4.11.5"
+    "posthog-node": "^4.18.0",
+    "sqlite3": "^5.1.7",
+    "uuid": "^11.1.0"
   }
 }

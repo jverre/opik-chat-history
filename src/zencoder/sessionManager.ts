@@ -33,14 +33,14 @@ export function getSessions(zencoderChatPaths: string[], sessionInfo: Record<str
 }
 
 export function* findAndReturnNewTraces(context: vscode.ExtensionContext, VSInstallationPath: string, sessionInfo: Record<string, SessionInfo>) {
-    const opikProjectName: string = vscode.workspace.getConfiguration().get('opikHistory.projectName') || 'default';
+    const opikProjectName: string = vscode.workspace.getConfiguration().get('opikHistory.projectNameZencoderChats') || 'default';
     
     // Search for the zencoder-chat folder
     const zencoderChatPaths = findFolder(VSInstallationPath, 'zencoder-chat');
     const sessions = getSessions(zencoderChatPaths, sessionInfo);
     
     for (const session of sessions) {
-        if (session.lastUploadTime && session.zencoderSession.updatedAt <= session.lastUploadTime) {
+        if (session.lastUploadTime && session.zencoderSession && session.zencoderSession.updatedAt <= session.lastUploadTime) {
           continue;
         }
     

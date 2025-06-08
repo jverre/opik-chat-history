@@ -1,4 +1,5 @@
 import { ZencoderSession } from './zencoder/interface';
+import { CursorSession } from './cursor/interface';
 
 export interface SessionInfo {
     lastUploadId?: string;
@@ -11,7 +12,8 @@ export interface Session {
     lastUploadId?: string;
     lastUploadDate?: string;
     lastUploadTime?: number;
-    zencoderSession: ZencoderSession;
+    zencoderSession?: ZencoderSession;
+    cursorSession?: CursorSession;
 }
 
 export interface TraceData {
@@ -22,4 +24,11 @@ export interface TraceData {
     input: any;
     output: any;
     thread_id?: string;
+    tags?: string[];
+    usage?: {
+        completion_tokens?: number;
+        prompt_tokens?: number;
+        total_tokens?: number;
+    };
+    metadata?: any;
 }
