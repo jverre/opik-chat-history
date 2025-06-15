@@ -69,12 +69,12 @@
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",
+    "@vscode/sqlite3": "^5.1.8-vscode",
     "axios": "^1.8.4",
     "glob": "^11.0.1",
     "node-fetch": "^3.3.2",
     "opik": "^1.7.2",
     "posthog-node": "^4.18.0",
-    "sqlite3": "^5.1.7",
     "uuid": "^11.1.0"
   }
 }

@@ -40,7 +40,13 @@ jobs:
       run: |
         gh release upload ${{ github.event.release.tag_name }} ./${{ steps.get_filename.outputs.filename }} --clobber
 
-    - name: Publish Extension
+    - name: Publish Extension to VS Code Marketplace
       env:
         VSCE_PAT: ${{ secrets.VSCE_PAT }}
       run: npm run deploy
+
+    - name: Publish Extension to Open VSX
+      env:
+        OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      run: |
+        npx ovsx publish ./${{ steps.get_filename.outputs.filename }} -p ${{ secrets.OVSX_PAT }}
