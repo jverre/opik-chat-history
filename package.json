@@ -4,7 +4,7 @@
   "description": "Export your chat history from Cursor and Zencoder to Opik.",
   "repository": "https://github.com/jverre/opik-chat-history",
   "publisher": "jverre",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "preview": false,
   "engines": {
     "vscode": "^1.90.0"
@@ -64,12 +64,12 @@
     "@vscode/test-cli": "^0.0.10",
     "@vscode/test-electron": "^2.4.1",
     "@vscode/vsce": "^3.3.2",
+    "@vscode/sqlite3": "^5.1.8-vscode",
     "eslint": "^9.23.0",
     "typescript": "^5.8.2"
   },
   "dependencies": {
     "@types/uuid": "^10.0.0",
-    "@vscode/sqlite3": "^5.1.8-vscode",
     "axios": "^1.8.4",
     "glob": "^11.0.1",
     "node-fetch": "^3.3.2",
