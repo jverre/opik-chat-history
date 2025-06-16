@@ -148,7 +148,7 @@ function processConversationBubbles(
  */
 function readCursorChatDataAsync(stateDbPath: string): Promise<any> {
     return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(stateDbPath, sqlite3.OPEN_READONLY, (err) => {
+        const db = new sqlite3.Database(stateDbPath, sqlite3.OPEN_READONLY, (err: any) => {
             if (err) {
                 console.error(`Error opening database ${stateDbPath}:`, err);
                 console.log(`⚠️  Skipping database ${path.basename(path.dirname(stateDbPath))} - could not open`);
