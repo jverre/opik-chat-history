@@ -4,7 +4,7 @@
   "description": "Export your chat history from Cursor and Zencoder to Opik.",
   "repository": "https://github.com/jverre/opik-chat-history",
   "publisher": "jverre",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "preview": false,
   "engines": {
     "vscode": "^1.90.0"
