@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-var sqlite3 = require('@vscode/sqlite3');
+import initSqlJs, { Database, QueryExecResult, SqlValue } from 'sql.js';
 
 import { SessionInfo } from "../interface";
 import { findFolder } from '../utils';
@@ -146,137 +146,134 @@ function processConversationBubbles(
 /**
  * Read cursor chat data from SQLite database (asynchronous version)
  */
-function readCursorChatDataAsync(stateDbPath: string): Promise<any> {
-    return new Promise((resolve, reject) => {
-        const db = new sqlite3.Database(stateDbPath, sqlite3.OPEN_READONLY, (err: any) => {
-            if (err) {
-                console.error(`Error opening database ${stateDbPath}:`, err);
-                console.log(`⚠️  Skipping database ${path.basename(path.dirname(stateDbPath))} - could not open`);
-                reject(err);
-                return;
-            }
-            
-            // Calculate 5 minutes ago timestamp (in milliseconds)
-            const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
+async function readCursorChatDataAsync(stateDbPath: string): Promise<any> {
+    try {
+        // Initialize SQL.js
+        const SQL = await initSqlJs();
+        
+        // Read the database file
+        const fileBuffer = fs.readFileSync(stateDbPath);
+        const db = new SQL.Database(new Uint8Array(fileBuffer));
+        
+        // Calculate 5 minutes ago timestamp (in milliseconds)
+        const fiveMinutesAgo = Date.now() - (5 * 60 * 1000);
 
-            // Find all composer chats
-            db.all(`SELECT key, value FROM cursorDiskKV 
-                    WHERE key LIKE 'composerData%' 
-                    AND (json_extract(value, '$.status') = 'completed' 
-                         OR (json_extract(value, '$.status') != 'completed' 
-                             AND json_extract(value, '$.lastUpdatedAt') < ${fiveMinutesAgo}))`, 
-                   (err: any, composerRows: any[]) => {
-                if (err) {
-                    console.error(`Error querying composer data:`, err);
-                    db.close();
-                    reject(err);
-                    return;
+        // Find all composer chats
+        const composerQuery = `SELECT key, value FROM cursorDiskKV 
+                WHERE key LIKE 'composerData%' 
+                AND (json_extract(value, '$.status') = 'completed' 
+                     OR (json_extract(value, '$.status') != 'completed' 
+                         AND json_extract(value, '$.lastUpdatedAt') < ${fiveMinutesAgo}))`;
+        
+        const composerRows = db.exec(composerQuery)[0]?.values || [];
+        
+        if (!composerRows || composerRows.length === 0) {
+            console.log(`⚠️ No composer data found in ${path.basename(path.dirname(stateDbPath))}`);
+            db.close();
+            return [];
+        }
+        
+        // Get all bubbles in one query
+        const bubbleQuery = "SELECT key, value FROM cursorDiskKV WHERE key LIKE 'bubbleId:%'";
+        const allBubbleRows = db.exec(bubbleQuery)[0]?.values || [];
+        
+        // Group bubbles by composer ID
+        const bubblesByComposer: Record<string, any[]> = {};
+        
+        allBubbleRows.forEach((bubbleRow: SqlValue[]) => {
+            if (!bubbleRow[1]) return; // value is at index 1
+            
+            try {
+                const key = bubbleRow[0];
+                if (typeof key !== 'string') return;
+                const composerId = key.split(':')[1]; // key is at index 0
+                const value = bubbleRow[1];
+                if (typeof value !== 'string') return;
+                const chatData = JSON.parse(value);
+                
+                if (!chatData) return;
+                
+                if (!bubblesByComposer[composerId]) {
+                    bubblesByComposer[composerId] = [];
                 }
                 
-                if (!composerRows || composerRows.length === 0) {
-                    console.log(`⚠️ No composer data found in ${path.basename(path.dirname(stateDbPath))}`);
-                    db.close();
-                    resolve([]);
-                    return;
-                }
-                
-                // Get all bubbles in one query instead of 32 separate queries
-                db.all("SELECT key, value FROM cursorDiskKV WHERE key LIKE 'bubbleId:%'", (err: any, allBubbleRows: any[]) => {
-                    if (err) {
-                        console.error(`Error querying all bubble data:`, err);
-                        db.close();
-                        reject(err);
-                        return;
-                    }
-                    
-                    // Group bubbles by composer ID
-                    const bubblesByComposer: Record<string, any[]> = {};
-                    
-                    allBubbleRows.forEach(bubbleRow => {
-                        if (!bubbleRow.value) return;
-                        
-                        try {
-                            const composerId = bubbleRow.key.split(':')[1]; // Extract composer ID
-                            const chatData = JSON.parse(bubbleRow.value);
-                            
-                            if (!chatData) return;
-                            
-                            if (!bubblesByComposer[composerId]) {
-                                bubblesByComposer[composerId] = [];
-                            }
-                            
-                            // Structure the bubble data
-                            const bubble = {
-                                ...chatData,
-                                id: bubbleRow.key.split(':')[2], // Extract bubble ID
-                                type: chatData.type === 1 ? 'user' : chatData.type === 2 ? 'ai' : 'unknown',
-                                text: chatData.text || chatData.content || '',
-                                content: chatData.text || chatData.content || '',
-                                rawText: chatData.text || chatData.content || '',
-                                richText: chatData.richText || '',
-                            };
-                            bubblesByComposer[composerId].push(bubble);
-                        } catch (parseErr) {
-                            // Silently skip unparseable chat data
-                        }
-                    });
-                    
-                    // Process each composer and build conversations
-                    const conversations: any[] = [];
-                    
-                    composerRows.forEach((composerRow, index) => {
-                        try {
-                            const composerData = JSON.parse(composerRow.value);
-                            
-                            // Handle null composerData
-                            if (!composerData) {
-                                console.log(`Skipping null composer data for row ${index}`);
-                                return;
-                            }
-                            
-                            const threadId = composerRow.key.split(':')[1];
-                            
-                            // Get bubbles for this composer
-                            const bubbles = bubblesByComposer[threadId] || [];
-                            
-                            // Sort bubbles using fullConversationHeadersOnly order
-                            if (composerData.fullConversationHeadersOnly && Array.isArray(composerData.fullConversationHeadersOnly)) {
-                                // Create a map of bubbleId to order index
-                                const orderMap = new Map();
-                                composerData.fullConversationHeadersOnly.forEach((header: any, index: number) => {
-                                    if (header.bubbleId) {
-                                        orderMap.set(header.bubbleId, index);
-                                    }
-                                });
-                                
-                                // Sort bubbles according to the order in fullConversationHeadersOnly
-                                bubbles.sort((a, b) => {
-                                    const aOrder = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
-                                    const bOrder = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
-                                    return aOrder - bOrder;
-                                });
-                            }
-                            
-                            // Add conversation
-                            conversations.push({
-                                chatTitle: composerData.name || `Composer Session ${index + 1}`,
-                                bubbles: bubbles,
-                                lastSendTime: composerData.lastUpdatedAt || composerData.createdAt,
-                                composerId: threadId,
-                                createdAt: composerData.createdAt,
-                                bubbleCount: bubbles.length
-                            });
-                        } catch (parseErr) {
-                            console.error(`Could not parse composer data for row ${index}:`, parseErr);
-                        }
-                    });
-                    
-                    db.close();
-                    resolve(conversations);
-                });
-            });
+                // Structure the bubble data
+                const bubble = {
+                    ...chatData,
+                    id: key.split(':')[2], // Extract bubble ID
+                    type: chatData.type === 1 ? 'user' : chatData.type === 2 ? 'ai' : 'unknown',
+                    text: chatData.text || chatData.content || '',
+                    content: chatData.text || chatData.content || '',
+                    rawText: chatData.text || chatData.content || '',
+                    richText: chatData.richText || '',
+                };
+                bubblesByComposer[composerId].push(bubble);
+            } catch (parseErr) {
+                // Silently skip unparseable chat data
+            }
         });
-    });
+        
+        // Process each composer and build conversations
+        const conversations: any[] = [];
+        
+        composerRows.forEach((composerRow: SqlValue[], index: number) => {
+            try {
+                const value = composerRow[1];
+                if (typeof value !== 'string') return;
+                const composerData = JSON.parse(value); // value is at index 1
+                
+                // Handle null composerData
+                if (!composerData) {
+                    console.log(`Skipping null composer data for row ${index}`);
+                    return;
+                }
+                
+                const key = composerRow[0];
+                if (typeof key !== 'string') return;
+                const threadId = key.split(':')[1]; // key is at index 0
+                
+                // Get bubbles for this composer
+                const bubbles = bubblesByComposer[threadId] || [];
+                
+                // Sort bubbles using fullConversationHeadersOnly order
+                if (composerData.fullConversationHeadersOnly && Array.isArray(composerData.fullConversationHeadersOnly)) {
+                    // Create a map of bubbleId to order index
+                    const orderMap = new Map();
+                    composerData.fullConversationHeadersOnly.forEach((header: any, index: number) => {
+                        if (header.bubbleId) {
+                            orderMap.set(header.bubbleId, index);
+                        }
+                    });
+                    
+                    // Sort bubbles according to the order in fullConversationHeadersOnly
+                    bubbles.sort((a, b) => {
+                        const aOrder = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
+                        const bOrder = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
+                        return aOrder - bOrder;
+                    });
+                }
+                
+                // Add conversation
+                conversations.push({
+                    chatTitle: composerData.name || `Composer Session ${index + 1}`,
+                    bubbles: bubbles,
+                    lastSendTime: composerData.lastUpdatedAt || composerData.createdAt,
+                    composerId: threadId,
+                    createdAt: composerData.createdAt,
+                    bubbleCount: bubbles.length
+                });
+            } catch (parseErr) {
+                console.error(`Could not parse composer data for row ${index}:`, parseErr);
+            }
+        });
+        
+        db.close();
+        return conversations;
+    } catch (error) {
+        console.error(`Error reading database ${stateDbPath}:`, error);
+        console.log(`⚠️  Skipping database ${path.basename(path.dirname(stateDbPath))} - could not open`);
+        throw error;
+    }
 }
 
 /**
