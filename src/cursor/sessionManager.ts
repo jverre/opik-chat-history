@@ -1,7 +1,7 @@
 import * as path from 'path';
 import * as vscode from 'vscode';
 import * as fs from 'fs';
-import * as sqlite3 from '@vscode/sqlite3';
+var sqlite3 = require('@vscode/sqlite3');
 
 import { SessionInfo } from "../interface";
 import { findFolder } from '../utils';
