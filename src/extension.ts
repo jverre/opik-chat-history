@@ -65,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
 
         if (!apiKey && showAPIKeyWarning) {
           vscode.window.showErrorMessage(
-            'To log Zencoder chat sessions to Opik you will need to set your Opik API Key.',
+            'To log your chat sessions to Opik you will need to set your Opik API Key.',
             'Open Settings'
           ).then(selection => {
             if (selection === 'Open Settings') {
@@ -80,7 +80,7 @@ export function activate(context: vscode.ExtensionContext) {
           return;
         } else if (apiKey && logAPIKeyBIEvent) {
           vscode.window.showInformationMessage(
-            'Your zencoder chat history will now be logged to Opik!'
+            'Your chat history will now be logged to Opik!'
           )
           logAPIKeyBIEvent = false;
           logBIExtensionActivated(posthog, uniqueId)
