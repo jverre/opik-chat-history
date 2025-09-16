@@ -1,10 +1,10 @@
 {
   "name": "opik-chat-history",
-  "displayName": "Opik - Export your chat history (Cursor, Zencoder)",
-  "description": "Export your chat history from Cursor and Zencoder to Opik.",
+  "displayName": "Deprecated",
+  "description": "Deprecated extension, use the new Opik extension instead.",
   "repository": "https://github.com/jverre/opik-chat-history",
   "publisher": "jverre",
-  "version": "0.1.9",
+  "version": "0.2.0",
   "preview": false,
   "engines": {
     "vscode": "^1.90.0"
